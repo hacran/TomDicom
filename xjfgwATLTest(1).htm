@@ -1,0 +1,587 @@
+﻿<HTML>
+<HEAD>
+<TITLE>新疆CA技术ATL-COM组件认证和签名测试</TITLE>
+<style type="text/css">
+<!--
+.STYLE1 {font-size: 12px}
+-->
+</style>
+
+<OBJECT id=xjcaFgwATLLib align="CENTER" WIDTH=0 HEIGHT=0  classid="CLSID:1A90914C-7DA9-4638-B9CF-838F9DDF2AD1"></OBJECT>
+
+<script language="javascript">
+var csp="CIDC Cryptographic Service Provider v1.0.0";
+//去左空格;
+
+
+function ltrim(s){ 
+return s.replace( /^\s*/, ""); 
+} 
+//去右空格; 
+function rtrim(s){ 
+return s.replace( /\s*$/, ""); 
+} 
+//去左右空格; 
+function trim(s){ 
+return rtrim(ltrim(s)); 
+}
+
+function toXML(strxml) {//用于解析xml字符串
+    try {
+        var xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+        // var xmlDoc = new ActiveXObject("Msxml2.DOMDocument");
+        xmlDoc.loadXML(strxml);
+    } catch (e) {
+        var oParser = new DOMParser();
+        xmlDoc = oParser.parseFromString(strxml, "text/xml");
+    }
+    return xmlDoc;
+}
+
+function doXjcaCertAuth(wsServIp,appId)
+{
+	var str =xjcaFgwATLLib.XJCA_GetCertDN(csp);
+	var arr1=new Array();
+	var arr2=new Array();
+	var temp=str.split(",");
+	arr2=" CN=";
+	for(var i=0;i<temp.length;i++)
+	{
+		var arr3=temp[i].substring(0,4);	
+		if(arr2.indexOf(arr3)==0 && arr3.indexOf(arr2)==0)
+		{
+		   arr1.push(temp[i].substring(4,temp[i].length+1));
+		}		 
+	}	
+	var authStr = xjcaFgwATLLib.XJCA_CertAuth(wsServIp,appId,arr1);
+	alert(authStr);
+	if(authStr!="")
+	{
+		if(authStr.length>5)
+		{
+			var xml =authStr;
+			var xmldoc = toXML(xml);
+			var message=xmldoc.getElementsByTagName("success")[0].text;
+			if(message=="true")			
+				return 10000;
+			else
+				return 10007;
+		}
+		else
+			return authStr;
+	}
+	else	
+			return 10008;
+}
+
+function doXjcaVerifyPin(pin)
+{
+	if(pin.length>=6&&pin.length<=8)
+	{
+		var verifyTmp = xjcaFgwATLLib.XJCA_VerifyPin(csp,pin);
+		return verifyTmp;
+	}
+	else
+		return 10009;
+	
+}
+
+function doXjcaModifyPin(oldPin,newPin)
+{
+	if(oldPin.length>=6&&oldPin.length<=8&&newPin.length>=6&&newPin.length<=8)
+	{
+		var verifyTmp = xjcaFgwATLLib.XJCA_ModifyPin(csp,oldPin,newPin);
+		return verifyTmp;
+	}
+	else
+		return 10009;
+}
+
+
+
+function doXjcaGetCertSN()
+{
+	var certSN = xjcaFgwATLLib.XJCA_GetCertSN(csp);
+	
+	document.getElementById("CertSN").value=certSN;
+}
+
+function doXjcaGetCertDN()
+{
+	var certDN =xjcaFgwATLLib.XJCA_GetCertDN(csp);
+	
+	document.getElementById("CertDN").value =certDN;
+}
+
+function doXjcaCspInstalled()
+{
+
+try{
+	var cspInstalled =xjcaFgwATLLib.XJCA_CspInstalled(csp);
+	if(cspInstalled==10000)
+		document.getElementById("CspInstalled").value ="已安装";
+	else
+		document.getElementById("CspInstalled").value ="未安装";
+}catch(e){
+document.getElementById("CspInstalled").value ="未安装";
+}
+}
+
+function doXjcaKeyInsert()
+{
+	var keyInsert =xjcaFgwATLLib.XJCA_KeyInsert(csp);
+	if(keyInsert==10000)
+		document.getElementById("KeyInsert").value ="已就绪";
+	else
+		document.getElementById("KeyInsert").value ="未就绪";
+}
+
+
+function doXjcaGetSymmKey()
+{
+	var symmKey = xjcaFgwATLLib.XJCA_GenSymmetric();
+	document.getElementById("SymmKey").value =symmKey;
+}
+
+function doXjcaEnStrBySymm()
+{
+	var symmKey = document.getElementById("SymmKey").value;
+	var orcText= document.getElementById("OrcText").value;
+	if(orcText=="")
+	{
+		document.getElementById("OrcText").value ="请输入原文数据";
+	}
+	else
+	{
+		//alert(orcText.length);
+		var cpText=xjcaFgwATLLib.XJCA_EnStrBySymmetric(orcText,symmKey);
+		//alert(cpText1);
+		document.getElementById("CpText").value =cpText;
+	}
+}
+
+function doXjcaDeStrBySymm()
+{
+	var symmKey = document.getElementById("SymmKey").value;
+	var cpText= document.getElementById("CpText").value;
+	if(cpText=="")
+	{
+		alert("密文为空");
+	}
+	else
+	{
+		var orcText=xjcaFgwATLLib.XJCA_DeStrBySymmetric(cpText,symmKey);
+		document.getElementById("CpToOrcText").value =orcText;
+		//alert(orcText);
+	}
+}
+
+function doXjcaEnFileBySymm()
+{
+	var symmKey = document.getElementById("SymmKey").value;
+	if(symmKey=="")
+	{
+		alert("密钥为空");
+	}
+	else
+	{
+		if(xjcaFgwATLLib.XJCA_EnFileBySymmetric("c:\\orc0.txt","c:\\encrypt.txt",symmKey)==10000)
+			alert("文件已加密，请到C：盘下查看");
+		else
+			alert("加密失败");
+	}
+}
+
+function doXjcaDeFileBySymm()
+{
+	var symmKey = document.getElementById("SymmKey").value;
+	if(symmKey=="")
+	{
+		alert("密钥为空");
+	}
+	else
+	{
+		if(xjcaFgwATLLib.XJCA_DeFileBySymmetric("c:\\encrypt.txt","c:\\orc1.txt",symmKey)==10000)	
+			alert("文件已解密，请到C：盘下查看");
+		else
+			alert("解密失败");
+	}
+}
+
+function doXjcaSymmKeySplit()
+{
+	var symmKey = document.getElementById("SymmKey").value;
+	if(symmKey=="")
+	{
+		alert("密钥为空");
+	}
+	else
+	{
+		var splitKey=xjcaFgwATLLib.XJCA_SymmKeySplit(symmKey,5,3);	
+		document.getElementById("SplitSymmKey").value =splitKey;	
+	}
+}
+
+function doXjcaSymmKeyRecomm()
+{
+	var childSplitKey = document.getElementById("ChildSplitKey").value;
+	if(childSplitKey=="")
+	{
+		alert("子密钥集为空");
+	}
+	else
+	{
+		var compSymmKey=xjcaFgwATLLib.XJCA_SymmKeyRecompose(childSplitKey,3);	
+		document.getElementById("CompSymmKey").value =compSymmKey;	
+	}
+}
+
+function doXjcaEnByAsymm()
+{
+	var oneSplitKey = document.getElementById("OneSplitKey").value;
+	if(oneSplitKey=="")
+	{
+		alert("子密钥为空");
+	}
+	else
+	{
+		var oneCpSplitKey=xjcaFgwATLLib.XJCA_EnByAsymmetric(csp,oneSplitKey);	
+		document.getElementById("OneCpSplitKey").value =oneCpSplitKey;	
+	}
+}
+
+
+function doXjcaDeByAsymm()
+{
+	var oneCpSplitKey = document.getElementById("oneCpSplitKey").value;
+	if(oneCpSplitKey=="")
+	{
+		alert("已加密子密钥为空");
+	}
+	else
+	{
+		var oneSplitKey=xjcaFgwATLLib.XJCA_DeByAsymmetric(csp,oneCpSplitKey);	
+		document.getElementById("OneSplitKey2").value =oneSplitKey;	
+	}
+}
+
+function doXjcaSignStr()
+{
+	var orcTextSign=document.getElementById("OrcTextSign").value;
+	if(orcTextSign=="")
+	{
+		alert("需要签名的数据为空");	
+	}
+	else
+	{
+		var textSign = xjcaFgwATLLib.XJCA_SignStr(csp,orcTextSign);
+		document.getElementById("TextSign").value =textSign;	
+	}
+}
+
+
+function doXjcaVerifySignStr(orcStr,signData,cert)
+{
+	var orcTextSign=document.getElementById("OrcTextSign").value;
+	var textSign=document.getElementById("TextSign").value;
+	if(textSign=="")
+	{
+		alert("签名数据为空");
+	}
+	else
+	{
+		var verifyTmp = xjcaFgwATLLib.XJCA_VerifySignStr(orcTextSign,textSign);
+		if(verifyTmp==10000)
+			document.getElementById("VerifySignIsOK").value ="验签成功";
+		else
+			document.getElementById("VerifySignIsOK").value ="验签失败";
+	}
+	
+}
+
+function doXjcaSignFile()
+{
+	
+	var textSign2 = xjcaFgwATLLib.XJCA_SignFile(csp,"c:\\orcsign.txt");
+	
+	document.getElementById("TextSign2").value =textSign2;
+}
+
+function doXjcaVerifySignFile()
+{
+	var textSign2=document.getElementById("TextSign2").value;
+	if(textSign2=="")
+	{
+		alert("签名数据为空");
+	}
+	else
+	{
+		var verifyTmp = xjcaFgwATLLib.XJCA_VerifySignFile("c:\\orcsign.txt",textSign2);
+		
+		if(verifyTmp==10000)
+			document.getElementById("VerifySignIsOK2").value ="验签成功";
+		else
+			document.getElementById("VerifySignIsOK2").value ="验签失败";
+	}
+	
+}
+function doXjcaEnStrByRSA()
+{
+	var orcCert=document.getElementById("EnStrByRSA").value;
+	if(orcCert=="")
+	{
+		alert("原文数据和证书为空");
+	}
+	else
+	{
+		var temp=orcCert.split(" ");
+		//alert("原文数据长度："+temp[0].length);
+		var enCert=xjcaFgwATLLib.XJCA_EnStrByRSA(temp[0],temp[1]);
+		document.getElementById("EnStr").value =enCert;
+	}
+}
+function doXjcaEnStrByRSAandAES()
+{
+	var orcCert=document.getElementById("EnStrByRSAAES").value;
+	if(orcCert=="")
+	{
+		alert("原文数据和证书为空");
+	}
+	else
+	{
+		var temp=orcCert.split(" ");
+		//alert("原文数据长度："+temp[0].length);
+		var enCert=xjcaFgwATLLib.XJCA_EnByRSAandAES(temp[0],temp[1]);
+		document.getElementById("EnStrRSAAES").value =enCert;
+	}
+}
+function doXjcaGetCertBase64()
+{
+	
+		
+		//alert("原文数据长度："+temp[0].length);
+		var CertBase64=xjcaFgwATLLib.XJCA_GetCertBase64(csp);
+		document.getElementById("CertBase").value =CertBase64;
+		alert(CertBase64.length);
+	
+}
+function doXjcaVerifySignStr2()
+{
+	var orc=document.getElementById("orc").value;
+	var sign=document.getElementById("sign").value;
+	if(orc==""||sign=="")
+	{
+		alert("签名数据或者原文数据为空");
+	}
+	else
+	{
+		var verifyTmp = xjcaFgwATLLib.XJCA_VerifySignStr2(csp,orc,sign);
+		
+		if(verifyTmp==10000)
+			document.getElementById("VerifySignIsOK3").value ="验签成功";
+		else
+			document.getElementById("VerifySignIsOK3").value ="验签失败";
+	}
+	
+}
+</script>
+</HEAD>
+
+<BODY >
+</br>
+<form name="form1" method="post" action="">
+<h1 align="center">新疆CA技术ATL-COM组件认证和签名测试</h1>
+<p>当前证书提供商：CIDC Cryptographic Service Provider v1.0.0</p>
+
+  <table  border="1" align="center">
+    <tr>
+      <td width="123" align="center" bgcolor="#3399FF"><strong>操作</strong></td>
+      <td width="310" align="center" bgcolor="#3399FF"><strong>输入</strong></td>
+      <td width="438" height="35" align="center" bgcolor="#3399FF"><strong>结果</strong></td>
+    </tr>
+    <tr>
+      <td>1、证书驱动是否安装</td>
+      <td align="left"><input type="button" value="CSP是否安装" id="csp" onClick="doXjcaCspInstalled();"></td>
+      <td height="37"><input name="CspInstalled" type="text" id="CspInstalled" size="32" maxlength="32"></td>
+    </tr>
+    <tr>
+      <td>2、Key是否已就绪</td>
+      <td align="left"><input type="button" value="Key是否就绪" id="csp2" onClick="doXjcaKeyInsert();"></td>
+      <td height="37"><input name="KeyInsert" type="text" id="KeyInsert" size="32" maxlength="32"></td>
+    </tr>
+    <tr>
+      <td width="123">3、取证书序列号</td>
+      <td align="left"><input type="button" value="取证书序列号" id="getCertSN" onClick="doXjcaGetCertSN();"></td>
+      <td height="37"><input name="CertSN" type="text" id="CertSN" size="32" maxlength="32"></td>
+    </tr>
+    <tr>
+      <td>4、取证书DN值</td>
+      <td align="left"><input name="getCertDN" type="button" id="getCertDN" onClick="doXjcaGetCertDN();" value="取证书DN值"></td>
+      <td><textarea name="CertDN" cols="60" rows="4" id="CertDN"></textarea></td>
+    </tr>
+    <tr>
+      <td>5、数字认证</td>
+      <td align="left"><input type="button" value="认证测试" id="getCertAuth" onClick="alert(doXjcaCertAuth('http://124.117.245.71:48080/webServices/ssoService','4028f6d24a2d7182014a2d83333e001a'));"></td>
+      <td><textarea name="CertAuth" cols="60" rows="4" id="CertAuth"></textarea></td>
+    </tr>
+	
+    <tr>
+      <td>6、PIN码测试</td>
+      <td align="left"><input type="button" value="校验pin码" id="verifypin" onClick="alert(doXjcaVerifyPin('123456'));"></td>
+      <td><input type="button" name="ModifyPin" id="ModifyPin" value="修改pin码" onClick="alert(doXjcaModifyPin('123456','1111199999'));"></td>
+    </tr>
+	<!--
+    <tr>
+      <td>6、自动取得对称密钥,可以手动输入密钥，不过密钥字符串必须长度不大于16，必须都为数字</td>
+      <td align="left"><input type="button" value="自动获取对称密钥" id="CertDN2" onClick="doXjcaGetSymmKey();" /></td>
+      <td>
+		<input name="SymmKey" type="text" id="SymmKey" size="32" maxlength="32">		
+      </td>
+    </tr>
+		 <tr>
+      <td>7、使用第6步的对称密钥进行字符串加密</td>
+      <td align="left">明文：<br/>
+        <input name="OrcText" type="text" id="OrcText" size="32" ><br/>
+        <input type="button" name="button" id="button" value="对称算法加密" onClick="doXjcaEnStrBySymm();"></td>
+      <td height="38">密文：<br/>
+        <input name="CpText" type="text" id="CpText" value="" size="64" maxlength="800"> 
+	  </td>
+    </tr>
+
+	
+    <tr>
+           <td>8、使用第6步的对称密钥和第7步的密文进行字符串解密</td>
+           <td align="left"><input type="button" name="button2" id="button2" value="对称算法解密" onClick="doXjcaDeStrBySymm();"></td>
+           <td height="31">
+           明文：<br/>
+           <input name="CpToOrcText" type="text" id="CpToOrcText" size="32" maxlength="32"></td>
+    </tr>
+    <tr>
+      <td>9、使用第6步的对称密钥进行文件加密</td>
+      <td align="left"><p>被加密文件为c:/orc0.txt，请到c:盘下创建该文件</p>
+      <p>
+        <input type="button" name="button3" id="button3" value="对称算法文件加密" onClick="doXjcaEnFileBySymm();">
+      </p></td>
+      <td height="31">加密文件为c:/encrypt.txt，该文件根据函数的输出文件参数生成</td>
+    </tr>
+    <tr>
+           <td>10、使用第6步的对称密钥进行文件解密</td>
+           <td align="left"><p>已加密文件第9步产生的文件</p>
+           <p>
+             <input type="button" name="button4" id="button4" value="对称算法文件解密" onClick="doXjcaDeFileBySymm();">
+           </p></td>
+           <td height="31">已解密文件为c:/orc1.txt，该文件根据函数的输出文件参数生成</td>
+    </tr>
+    <tr>
+           <td>11、对第6步的对称密钥进行门限分解，假定总人数为5人，解密人数为3人，可以手动输入密钥参数，但是密钥字符串长度必须不大于16，并且都为数字</td>
+           <td align="left"><input type="button" name="button5" id="button5" value="门限密钥分解" onClick="doXjcaSymmKeySplit();"></td>
+           <td height="31">
+           说明：分解后的子密钥以逗号隔开<br/>
+           <textarea name="SplitSymmKey" cols="60" rows="4" id="SplitSymmKey"></textarea></td>
+    </tr>
+    <tr>
+      <td>12、对第6步的对称密钥进行门限合并，从11步中分解的密钥任取3项进行合并，看合并结果是否与第6步的对称密钥相等</td>
+      <td align="left"><p>任意取3对子密钥，中间用逗号隔开，填入到下框中：</p>
+      <p>
+        <textarea name="ChildSplitKey" cols="60" rows="4" id="ChildSplitKey"></textarea>
+        <input type="button" name="button6" id="button6" value="门限密钥合并" onClick="doXjcaSymmKeyRecomm();">
+      </p></td>
+      <td height="31"><input name="CompSymmKey" type="text" id="CompSymmKey" size="32" maxlength="32"></td>
+    </tr>
+    <tr>
+      <td>13、从第11步产生的分解密钥中任取一个进行不对称加密</td>
+      <td align="left"><p>
+      子密钥:<br/>
+        <textarea name="OneSplitKey" cols="60" rows="2" id="OneSplitKey"></textarea>
+      </p>
+      <p>
+        <input type="button" name="button7" id="button7" value="不对称加密（证书加密）" onClick="doXjcaEnByAsymm();">
+      </p></td>
+      <td height="31">
+      已加密子密钥：<br/>
+      <textarea name="OneCpSplitKey" cols="60" rows="2" id="OneCpSplitKey"></textarea></td>
+    </tr>
+    <tr>
+      <td>14、将第14步的密文进行解密</td>
+      <td align="left"><input type="button" name="button8" id="button8" value="不对称解密（证书解密）" onClick="doXjcaDeByAsymm();"></td>
+      <td height="31">
+      已解密子密钥：<br/>
+      <textarea name="OneSplitKey2" cols="60" rows="2" id="OneSplitKey2"></textarea></td>
+    </tr>
+    <tr>
+      <td>15、字符串签名</td>
+      <td align="left">
+      原文数据：<br/>
+      <textarea name="OrcTextSign" cols="60" rows="2" id="OrcTextSign"></textarea> <br/>       <input type="button" name="button9" id="button9" value="字符串签名" onClick="doXjcaSignStr();"></td>
+      <td height="31">
+      签名数据：<br/>
+      <textarea name="TextSign" cols="60" rows="6" id="TextSign"></textarea></td>
+    </tr>
+    <tr>
+      <td>16、字符串验签</td>
+      <td align="left"><input type="button" name="button10" id="button10" value="字符串验签" onClick="doXjcaVerifySignStr();"></td>
+      <td height="31"><input name="VerifySignIsOK" type="text" id="VerifySignIsOK" value="" size="32"></td>
+    </tr>
+    <tr>
+      <td>17、文件签名</td>
+      <td align="left"><p>被签名文件为c:/orcsign.txt，请到c:盘创建该文件</p>
+      <p>
+        <input type="button" name="button11" id="button11" value="文件签名" onClick="doXjcaSignFile();">
+      </p></td>
+      <td height="31">签名数据：<br/>
+      <textarea name="TextSign2" cols="60" rows="6" id="TextSign2"></textarea></td>
+    </tr>
+    <tr>
+      <td>18、文件验签</td>
+      <td align="left"><input type="button" name="button12" id="button12" value="文件签名验签" onClick="doXjcaVerifySignFile();"></td>
+      <td height="31"><input name="VerifySignIsOK2" type="text" id="VerifySignIsOK2" value="" size="32"></td>
+    </tr>
+	<tr>
+      <td>19、利用Base64证书对字符串进行RSA不对称加密</td>
+      <td align="left"><p>输入原文数据和Base64证书用空格隔开：</p>
+      <p>
+        <textarea name="EnStrByRSA" cols="60" rows="6" id="EnStrByRSA">XSJqjJK0o5JA/5b9加密数据测试测试测试ZoY= MIIDbDCCAtWgAwIBAgIMK1NdOntInVP4AEqRMA0GCSqGSIb3DQEBBQUAMHQxCzAJBgNVBAYTAkNOMSEwHwYDVQQIDBjmlrDnlobnu7TlkL7lsJToh6rmsrvljLoxFTATBgNVBAcMDOS5jOmygeacqOm9kDENMAsGA1UECgwEeGpjYTENMAsGA1UECwwEeGpjYTENMAsGA1UEAwwEeGpjYTAeFw0xMjAyMjUwNjU2NDNaFw0xNTAzMDEwNzEwMzdaMIIBAzEnMCUGA1UEFB4eADYANQAwADAAMgAwADAAMAAwADAAMAAwADAAMAAyMQswCQYDVQQGEwJDTjENMAsGA1UECB4EZbB1hjEPMA0GA1UEBx4Ggepsu1M6MRkwFwYDVQQKHhCB6my7UzpT0VxVZTmXaVnUMQ8wDQYDVQQLHgZlNo05WQQxIDAeBgkqhkiG9w0BCQEWEWZnd3NmY0Bnb3YuY29tLmNuMRkwFwYDVQQqHhBRdVbiXvpd5V4IU2t1H1xAMRswGQYDVQQBHhIAQwBBADEAMgAzADQANQA2ADcxJTAjBgNVBAMeHFF1VuJe+l3lXghTa3UfXEAAMgA1ADgAMgAxADIwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMlxURRsif/deZ2y5PmMZuXMkTZva2sqH/KmfTHCXBxL9W80MQ9EhI69X9O37HmCjSwC1lBFJdFZ/s79pMRT/zivXDzKR7CTK062EKU9ma2foy4VBqPuUy4s4wGU8xK3l9HeNPRrOevRLq0tTAs0XUzDTReMvrEm0d21rRR7ART3AgMBAAGjcjBwMAwGA1UdEwQFMAMBAQAwCwYDVR0PBAQDAgDoMBMGA1UdJQQMMAoGCCsGAQUFBwMCMB8GA1UdIwQYMBaAFMOFXu/Ry6x2DyC7Aqozvlz4W6qNMB0GA1UdDgQWBBRrUZ6fAde3SBI+sYkHpw4+x60iMDANBgkqhkiG9w0BAQUFAAOBgQAt6iTz98v45pnWZ3V981WAHOmCGYE+kq3/RS70OgnaQtFkP/xvlewACXr0AXCNsdPA+ThRwBDOr9Ut2g9Y5IlIXrlQibsdshbD+eu8Vo6hW4AE9AdHYhINt32i/z3oSq4Q47V6SyTydU1+UpZOlqDKwarUIubpt3T58jKtTK+AYA==</textarea>
+        <input type="button" name="button6" id="button13" value="不对称加密" onClick="doXjcaEnStrByRSA();">
+      </p></td>
+      <td height="31"><textarea name="EnStr" cols="60" rows="6" id="EnStr"></textarea></td>
+    </tr>
+	<tr>
+      <td>20、利用Base64证书对字符串进行RSA和AES结合加密</td>
+      <td align="left"><p>输入原文数据和Base64证书用空格隔开：</p>
+      <p>
+        <textarea name="EnStrByRSAAES" cols="60" rows="6" id="EnStrByRSAAES">XSJqjJK0o5JA/5b9加密数据测试测试测试ZoY= MIIC1TCCAj6gAwIBAgIMLU+iT3akgzBnq8aqMA0GCSqGSIb3DQEBBQUAMHQxCzAJBgNVBAYTAkNOMSEwHwYDVQQIDBjmlrDnlobnu7TlkL7lsJToh6rmsrvljLoxFTATBgNVBAcMDOS5jOmygeacqOm9kDENMAsGA1UECgwEeGpjYTENMAsGA1UECwwEeGpjYTENMAsGA1UEAwwEeGpjYTAeFw0xMjAzMTYxMDA2MTlaFw0xNTAzMjExMDA2MTlaMIGCMREwDwYDVQQLHggAeABqAGMAYTELMAkGA1UEBhMCY24xDTALBgNVBAgeBAB4AGoxFTATBgNVBAceDAB1AHIAdQBtAHEAaTERMA8GA1UECh4IAHgAagBjAGExJzAlBgNVBAMeHgBzAHMAbAAuAHgAagBjAGEALgBjAG8AbQAuAGMAbjCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEArV0YRQOkiwEprT4KwSF45pPFNrydgyzEyWj/7ZKBmBvkejjbUa/aJSdl4F5KFUiz2p49pQ4rWMi7WTArfXIVxH3/8jV9zmkweuK+ZYeJd4fgUY8ayHFk1ADixKbB9DqbDSpFDrhH8e9TXyAveIDSYcdIZws3SuFrPilXg5lAupUCAwEAAaNdMFswDAYDVR0TBAUwAwEBADALBgNVHQ8EBAMCAOgwHwYDVR0jBBgwFoAUw4Ve79HLrHYPILsCqjO+XPhbqo0wHQYDVR0OBBYEFFOJ6A08ccihwk3Xei7/o0Tt3ynnMA0GCSqGSIb3DQEBBQUAA4GBAFndO1PKFZjgd+6gxE5EyMKYkAWdb8rf4eTxrpN6S/u02lvbJsNgH11haTeDyhox06Xg0RyABbnLKgzhxdPPTI4q5mHn2akPzVOVk+FF9fwRSFYig5dLKuVJ677yih/ZWdiFpogrCS0frJ+91dGEBfYqU+II0lFpQuKlSqkdxm5Y </textarea>
+        <input type="button" name="button6" id="button14" value="不对称加密" onClick="doXjcaEnStrByRSAandAES();">
+      </p></td>
+      <td height="31"><textarea name="EnStrRSAAES" cols="60" rows="6" id="EnStrRSAAES"></textarea></td>
+    </tr>
+	-->
+	<tr>
+      <td>21、获取Base64编码证书</td>
+      <td align="left">
+       <input type="button" name="button6" id="button15" value="获取Base64编码证书" onClick="doXjcaGetCertBase64();">
+      </td>
+      <td height="31"><textarea name="CertBase" cols="60" rows="6" id="CertBase"></textarea></td>
+    </tr>
+	<tr>
+      <td>20、字符串签名验签（不带用户证书）</td>
+      <td align="left"><p><textarea name="orc" cols="60" rows="2" id="orc"></textarea>
+    </p>
+      <p>
+	  <textarea name="sign" cols="60" rows="2" id="sign"></textarea>
+          <input type="button" name="button6" id="button15" value="字符串签名验签" onClick="doXjcaVerifySignStr2();">
+      </p></td>
+      <td height="31"><input name="VerifySignIsOK3" type="text" id="VerifySignIsOK3" value="" size="32"></td>
+    </tr>
+  </table>
+</form>
+<p>&nbsp;</p>
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td height="60" align="center" class="css">        <span class="STYLE1">Copyright&nbsp;&copy;2011 新疆数字证书认证（有限公司） All rights reserved <br>
+      新疆CA技术ATL-COM组件 V2011.9.11<br>
+&nbsp;电话:0991-2819290-804&nbsp;　技术支持：<a href="http://www.xjca.com.cn">新疆CA中心</a></span></td>
+    </tr>
+</table>
+</BODY>
+</HTML>
+
